@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>在线通知</title>
+<style>
+    /* ============ 全局 ============ */
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+        --bg: #0f1419;
+        --card-bg: #1a2332;
+        --card-border: rgba(255,255,255,0.08);
+        --text: #e2e8f0;
+        --text-light: #94a3b8;
+        --accent: #3b82f6;
+        --divider: rgba(255,255,255,0.08);
+    }
+    html, body {
+        background: var(--bg);
+        color: var(--text);
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC",
+                     "Microsoft YaHei", sans-serif;
+        line-height: 1.6;
+        -webkit-font-smoothing: antialiased;
+    }
+    body {
+        padding: 16px 18px 24px;
+        min-height: 100%;
+    }
+
+    /* ============ 页头 ============ */
+    .page-header {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding-bottom: 12px;
+        margin-bottom: 16px;
+        border-bottom: 1px solid var(--divider);
+    }
+    .page-header .icon {
+        font-size: 20px;
+    }
+    .page-header h1 {
+        font-size: 17px;
+        font-weight: 600;
+        color: var(--text);
+    }
+    .page-header .version {
+        margin-left: auto;
+        font-size: 12px;
+        color: var(--text-light);
+    }
+
+    /* ============ 通知列表 ============ */
+    .notice-list {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+    }
+    .notice-item {
+        background: var(--card-bg);
+        border: 1px solid var(--card-border);
+        border-radius: 10px;
+        padding: 14px 16px;
+        transition: border-color 0.2s;
+    }
+    .notice-item:hover {
+        border-color: rgba(59,130,246,0.4);
+    }
+    .notice-top {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 8px;
+        flex-wrap: wrap;
+    }
+    .notice-title {
+        font-size: 15px;
+        font-weight: 600;
+        color: var(--text);
+    }
+    .notice-date {
+        margin-left: auto;
+        font-size: 12px;
+        color: var(--text-light);
+        white-space: nowrap;
+    }
+    .notice-content {
+        font-size: 13.5px;
+        color: var(--text-light);
+        line-height: 1.7;
+    }
+    .notice-content p { margin-bottom: 6px; }
+    .notice-content p:last-child { margin-bottom: 0; }
+    .notice-content ul { padding-left: 20px; margin: 6px 0; }
+    .notice-content li { margin-bottom: 3px; }
+    .notice-content a {
+        color: var(--accent);
+        text-decoration: none;
+        word-break: break-all;
+    }
+    .notice-content a:hover { text-decoration: underline; }
+
+    /* ============ 标签 ============ */
+    .tag {
+        display: inline-block;
+        font-size: 11px;
+        font-weight: 700;
+        padding: 2px 8px;
+        border-radius: 10px;
+        letter-spacing: 0.3px;
+        line-height: 1.5;
+    }
+    .tag-new     { background: rgba(34,197,94,0.15);  color: #4ade80; }
+    .tag-improve { background: rgba(59,130,246,0.15); color: #60a5fa; }
+    .tag-opt     { background: rgba(168,85,247,0.15); color: #c084fc; }
+    .tag-fix     { background: rgba(239,68,68,0.15);  color: #f87171; }
+    .tag-notice  { background: rgba(245,158,11,0.15); color: #fbbf24; }
+
+    /* ============ 空状态 ============ */
+    .empty {
+        text-align: center;
+        color: var(--text-light);
+        padding: 40px 20px;
+        font-size: 14px;
+    }
+
+    /* ============ 页脚 ============ */
+    .page-footer {
+        margin-top: 20px;
+        padding-top: 12px;
+        border-top: 1px solid var(--divider);
+        text-align: center;
+        font-size: 11px;
+        color: var(--text-light);
+        opacity: 0.7;
+    }
+
+    /* 适配窄屏 */
+    @media (max-width: 480px) {
+        body { padding: 12px; }
+        .notice-top { flex-direction: column; align-items: flex-start; }
+        .notice-date { margin-left: 0; }
+    }
+</style>
+</head>
+<body>
+
+<div class="page-header">
+    <span class="icon">🔔</span>
+    <h1>在线通知</h1>
+    <span class="version" id="versionLabel"></span>
+</div>
+
+<div class="notice-list" id="noticeList">
+    <div class="empty">加载中…</div>
+</div>
+
+<div class="page-footer">
+    暗区突围保险箱模拟 · 在线通知中心
+</div>
+
+<script>
+/* =====================================================================
+   📝 通知内容配置区
+   ---------------------------------------------------------------------
+   直接修改下方 NOTICES 数组即可更新通知。
+   每条通知包含：
+     - title   : 标题
+     - date    : 日期（字符串，自由格式）
+     - tag     : 标签，可选值：'new' | 'improve' | 'opt' | 'fix' | 'notice'
+     - content : 正文，支持 HTML（<p>、<ul><li>、<a> 等）
+   数组中越靠前的通知显示越靠上。
+   ===================================================================== */
+const NOTICES = [
+    {
+        title: '欢迎使用在线通知系统',
+        date: '2026-10-02',
+        tag: 'notice',
+        content: `
+            <p>这是一条示例通知。</p>
+            <p>你可以直接编辑本文件 <code>NOTICES</code> 数组来发布新通知，保存并推送到 GitHub 后即时生效。</p>
+        `
+    },
+    {
+        title: 'v1.6.2 更新内容',
+        date: '2026-10-02',
+        tag: 'new',
+        content: `
+            <ul>
+                <li><b>NEW</b> 新增了棍木</li>
+                <li><b>IMPROVE</b> 优化棍木</li>
+                <li><b>OPT</b> 优化了棍木</li>
+            </ul>
+        `
+    }
+    // 在这里继续添加新通知，例如：
+    // ,
+    // {
+    //     title: '标题',
+    //     date: '2026-10-03',
+    //     tag: 'fix',
+    //     content: '<p>修复了 xxx 问题</p>'
+    // }
+];
+
+const VERSION = 'v1.0.0'; // 通知页自身版本，可选
+
+/* ============ 渲染逻辑（一般无需修改） ============ */
+(function () {
+    var list = document.getElementById('noticeList');
+    var versionLabel = document.getElementById('versionLabel');
+    if (versionLabel) versionLabel.textContent = VERSION;
+
+    if (!NOTICES || NOTICES.length === 0) {
+        list.innerHTML = '<div class="empty">暂无通知</div>';
+        return;
+    }
+
+    var tagClass = {
+        'new':     'tag-new',
+        'improve': 'tag-improve',
+        'opt':     'tag-opt',
+        'fix':     'tag-fix',
+        'notice':  'tag-notice'
+    };
+    var tagText = {
+        'new':     'NEW',
+        'improve': 'IMPROVE',
+        'opt':     'OPT',
+        'fix':     'FIX',
+        'notice':  'NOTICE'
+    };
+
+    list.innerHTML = NOTICES.map(function (n) {
+        var cls = tagClass[n.tag] || 'tag-notice';
+        var txt = tagText[n.tag] || (n.tag || 'NOTICE').toUpperCase();
+        return '' +
+            '<div class="notice-item">' +
+                '<div class="notice-top">' +
+                    '<span class="tag ' + cls + '">' + txt + '</span>' +
+                    '<span class="notice-title">' + escapeHtml(n.title) + '</span>' +
+                    '<span class="notice-date">' + escapeHtml(n.date) + '</span>' +
+                '</div>' +
+                '<div class="notice-content">' + (n.content || '') + '</div>' +
+            '</div>';
+    }).join('');
+
+    function escapeHtml(str) {
+        if (str == null) return '';
+        var div = document.createElement('div');
+        div.textContent = String(str);
+        return div.innerHTML;
+    }
+})();
+</script>
+
+</body>
+</html>
